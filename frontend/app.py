@@ -109,7 +109,13 @@ def run_analysis(cv_bytes, jd_content):
 
         # Step 3
         progress_bar.progress(60, text="⚖️ Calculating Match Score...")
-        match_payload = {"jd_skills": jd_data.get("skills", []), "cv_skills": cv_data.get("skills", []), "cv_text": None}
+        match_payload = {
+            "jd_skills": jd_data.get("skills", []), 
+            "cv_skills": cv_data.get("skills", []), 
+            "cv_text": None,
+            "experience_summary": cv_data.get("experience_summary"),
+            "jd_seniority": jd_data.get("seniority_level")
+        }
         match_res = requests.post(f"{BASE_URL}/match", json=match_payload)
         match_res.raise_for_status()
         match_data = match_res.json()
@@ -120,7 +126,11 @@ def run_analysis(cv_bytes, jd_content):
         progress_bar.progress(80, text="📚 Generating Study Syllabus...")
         syllabus_data = []
         if missing_skills:
-            syll_res = requests.post(f"{BASE_URL}/syllabus", json={"missing_skills": missing_skills})
+            syll_res = requests.post(f"{BASE_URL}/syllabus", json={
+                "missing_skills": missing_skills,
+                "experience_summary": cv_data.get("experience_summary"),
+                "jd_seniority": jd_data.get("seniority_level")
+            })
             try:
                 syll_res.raise_for_status()
                 syllabus_data = syll_res.json()
@@ -130,7 +140,12 @@ def run_analysis(cv_bytes, jd_content):
         # Step 5
         progress_bar.progress(95, text="🎙️ Preparing Interview Questions...")
         interview_data = {}
-        int_res = requests.post(f"{BASE_URL}/interview", json={"job_description": jd_content, "missing_skills": missing_skills})
+        int_res = requests.post(f"{BASE_URL}/interview", json={
+            "job_description": jd_content, 
+            "missing_skills": missing_skills,
+            "experience_summary": cv_data.get("experience_summary"),
+            "jd_seniority": jd_data.get("seniority_level")
+        })
         try:
             int_res.raise_for_status()
             interview_data = int_res.json()
