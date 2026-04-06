@@ -103,7 +103,7 @@ async def analyze_job_description(job_description: str) -> AnalyzeJDResponse:
     )
     user = f"""Analyze this job description and return JSON with this exact shape:
 {{
-  "skills": ["list of all distinct technical and professional skills mentioned"],
+  "skills": ["list of distinct technical and professional skills mentioned"],
   "responsibilities": "string summarizing main responsibilities",
   "seniority_level": "one of: Junior, Mid, Senior, Lead, Principal, Executive, or Unknown",
   "categorized_skills": {{
@@ -111,6 +111,13 @@ async def analyze_job_description(job_description: str) -> AnalyzeJDResponse:
     "good_to_have": ["nice-to-have or preferred skills"]
   }}
 }}
+
+CRITICAL RULES FOR EXTRACTING SKILLS:
+1. ONLY extract actual tools, technologies, methodologies, and competencies (e.g., "Python", "Linux", "Test Automation", "Root Cause Analysis").
+2. DO NOT extract full sentences (e.g., "Good knowledge of Linux" -> just "Linux").
+3. DO NOT extract degrees or education (e.g., "B.E/B.BTech" -> SKIP).
+4. DO NOT extract years of experience (e.g., "2-4 Years of hands on experience" -> SKIP).
+5. DE-DUPLICATE similar concepts so you don't return both "QA methodologies" and "Good understanding of QA methodologies".
 
 Job description:
 {job_description}
@@ -193,10 +200,15 @@ If a candidate has years of experience in a specialized role, you MUST infer the
 - E.g. (Marketing) If they run "Google Ads CPA campaigns", they ABSOLUTELY know "digital marketing" and "data analysis".
 You MUST mark these implicit foundational skills as strengths when analyzing their profile!
 
-2. ROLE HIERARCHY & DOMAIN MATCHING:
+2. CAPABILITIES, SENIORITY & SOFT SKILLS MAPPING:
+A senior candidate's resume proves competencies even if buzzwords are missed:
+- "Staff Engineer" or 9+ years of experience implies they possess "Mentoring", "Leadership", "test approach", and "feature design" skills. Mark them as strengths!
+- If a CV mentions "debugging", "performance reproduction", or "analyzing regressions", this EXACTLY matches JD items like "failure analysis", "root cause analysis", or "defect filing". Map these semantic synonyms to Strengths! Do NOT say they are missing.
+
+3. ROLE HIERARCHY & DOMAIN MATCHING:
 If the JD asks for general domains like "systems products" or "distributed systems" or "QA methodologies", look at what the candidate actually does (e.g. SSDs, NVMe, CXL, Jenkins, Regression flows). These prove the domain. Mark it as a match.
 
-3. STRICTNESS ON EXACT TECHNOLOGIES (Hard Negatives):
+4. STRICTNESS ON EXACT TECHNOLOGIES (Hard Negatives):
 - You CANNOT infer purely distinct programming languages (e.g., Python does not mean they know Go). If JD asks for Go, and CV only has Python, mark Go as missing.
 - You CANNOT infer specific vendor products like 'ESXi', 'Hyper-V', or 'KVM' unless virtualization at that exact layer is implied/mentioned. Mark them as missing if there are no virtualization signals.
 
