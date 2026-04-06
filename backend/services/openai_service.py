@@ -119,9 +119,11 @@ Job description:
     responsibilities = normalize_ai_text_field(data.get("responsibilities"))
     must_have = _as_str_list(data.get("categorized_skills", {}).get("must_have"))
     good_to_have = _as_str_list(data.get("categorized_skills", {}).get("good_to_have"))
-    skills = _as_str_list(data.get("skills"))
-    if not skills:
-        skills = list(dict.fromkeys(must_have + good_to_have))
+    
+    # Merge all extracted skills ensuring nothing is dropped
+    base_skills = _as_str_list(data.get("skills"))
+    skills = list(dict.fromkeys(base_skills + must_have + good_to_have))
+    
     seniority = str(data.get("seniority_level") or "Unknown").strip()
     return AnalyzeJDResponse(
         skills=skills,
@@ -167,10 +169,8 @@ async def match_skills_strict(
     cv_text: str | None = None,
 ) -> MatchResponse:
     system = (
-        "You compare JD skills to a candidate's CV for ANY industry. "
-        "When a CV establishes a parent role or domain, treat standard sub-skills as satisfied WITHOUT "
-        "requiring those exact phrases in the CV (role hierarchy / subset reasoning). "
-        "Still require real evidence for the parent; never equate unrelated technologies (e.g. Python is not Go). "
+        "You are an expert technical Engineering Manager and Senior Recruiter evaluating a candidate's CV against a Job Description. "
+        "Your CORE directive is to use deep semantic inference. Candidates do not always use the exact keywords from the JD. "
         "Return ONLY valid JSON. No markdown, no explanation."
     )
     jd_unique = list(dict.fromkeys(s.strip() for s in jd_skills if s and str(s).strip()))
@@ -181,40 +181,27 @@ async def match_skills_strict(
         excerpt = cv_text.strip()[:80000]
         text_block = f"\n\nFULL CV TEXT (use for evidence; excerpt may be truncated):\n{excerpt}\n"
 
-    user = f"""For each jd_skill, decide if the candidate has enough evidence — including IMPLIED evidence via role subsets (below).
+    user = f"""You must accurately match jd_skills to the candidate's CV for ANY industry (Tech, Finance, Healthcare, etc.).
 
-CORE PRINCIPLE — ROLE HIERARCHIES (any candidate, any resume):
-- Do NOT require the JD phrase to appear verbatim in the CV when it is a **standard sub-skill of a parent role/domain** that the CV **clearly establishes** with real experience (titles, responsibilities, projects).
-- First identify **what parent competency** the CV proves (e.g. QA engineer, SDET, backend developer, SRE, data engineer, Linux admin). Then, if a jd_skill is a **normal, widely-expected component** of that parent in industry practice, count it as a STRENGTH even if the CV never uses those exact words.
-- Only use this when the CV shows **meaningful** work in that parent area — not a single keyword with no context.
+CORE PRINCIPLE: INTELLIGENT INFERENCE & DEDUCTION
+DO NOT just do dumb keyword matching. You must read the CV holistically to understand the candidate's actual daily work and experience.
 
-EXAMPLES OF SUBSET REASONING (non-exhaustive; apply the same logic to other roles):
-- **QA / quality / test engineering** (hands-on testing): Subsumes typical JD items such as **test planning**, **test execution**, **manual testing**, **test cases**, **defect/triage** work, and **troubleshooting** *in a testing/quality context* — without requiring each phrase in the CV.
-- **Software engineering / development**: Often subsumes **debugging**, **troubleshooting** code/systems, **code review**-adjacent skills when dev work is described.
-- **SRE / DevOps / platform**: Often subsumes **CI/CD**, **monitoring**, **incident response**, **troubleshooting** production — when that role is evidenced.
-- **Backend / API development**: Often subsumes **API**-related JD items when backend work is clear.
-- **Data engineering**: Often subsumes **ETL/pipeline**-style JD items when that role is evidenced.
-- **Linux admin / Linux-heavy roles**: Subsumes **Linux**, often **shell scripting** when CLI/bash work is implied.
-- **Domain-specific**: **Storage**, **distributed systems**, **virtualization** products: apply subset rules only when the CV shows work in that domain; see HARD NEGATIVES.
+1. INFERRED FOUNDATIONAL SKILLS (Crucial):
+If a candidate has years of experience in a specialized role, you MUST infer the foundational competencies required to do that job.
+- E.g. (Tech) If they build "automation frameworks" for "NVMe SSDs" using "Pytest", they ABSOLUTELY know "automated testing", "troubleshooting", and "storage validation".
+- E.g. (Finance) If they are an "Auditor" who handles "SEC filings", they ABSOLUTELY have "financial reporting", "compliance", and "analytical skills".
+- E.g. (Marketing) If they run "Google Ads CPA campaigns", they ABSOLUTELY know "digital marketing" and "data analysis".
+You MUST mark these implicit foundational skills as strengths when analyzing their profile!
 
-A) DIRECT / SYNONYM MATCHES (always apply):
-- Explicit names, synonyms, paraphrases (e.g. manual QA ↔ manual testing; CI/CD ↔ continuous integration; RHEL/Ubuntu ↔ Linux; bash/sh ↔ shell scripting).
+2. ROLE HIERARCHY & DOMAIN MATCHING:
+If the JD asks for general domains like "systems products" or "distributed systems" or "QA methodologies", look at what the candidate actually does (e.g. SSDs, NVMe, CXL, Jenkins, Regression flows). These prove the domain. Mark it as a match.
 
-B) DOMAIN-SPECIFIC EVIDENCE (when subset alone is not enough):
-- **Storage concepts**: Need professional signals (SSDs, SAN/NAS, storage systems, disk performance, etc.), not casual hardware use.
-- **Distributed systems**: Need real signals (clusters, microservices, Kafka, multi-node, etc.).
-- **Programming in Go / Golang**: Require Go/Golang (or unmistakable Go-only stack) — **Python ≠ Go**.
-- **ESXi / Hyper-V / KVM / VMware**: Require virtualization product evidence — do not infer from Linux alone.
+3. STRICTNESS ON EXACT TECHNOLOGIES (Hard Negatives):
+- You CANNOT infer purely distinct programming languages (e.g., Python does not mean they know Go). If JD asks for Go, and CV only has Python, mark Go as missing.
+- You CANNOT infer specific vendor products like 'ESXi', 'Hyper-V', or 'KVM' unless virtualization at that exact layer is implied/mentioned. Mark them as missing if there are no virtualization signals.
 
-C) HARD NEGATIVES:
-- Never map one programming language to another.
-- Do not invent employers, dates, or tools not supported by the CV.
-- Do not mark a niche product skill from a generic OS/cloud mention alone.
-
-OUTPUT:
-- strengths: each matched item MUST be an EXACT string copy from jd_skills (same spelling/casing as in jd_skills list).
-- missing_skills: jd_skills items not matched (exact strings from jd_skills).
-- strengths + missing_skills must partition jd_skills (each jd skill appears exactly once).
+4. EXHAUSTIVE OUTPUT:
+- EVERY single JD skill MUST be categorized as either a strength OR a missing_skill. Do not drop any.
 
 Return JSON:
 {{
