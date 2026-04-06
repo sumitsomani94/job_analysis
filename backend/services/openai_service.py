@@ -174,6 +174,8 @@ async def match_skills_strict(
     jd_skills: list[str],
     cv_skills: list[str],
     cv_text: str | None = None,
+    experience_summary: str | None = None,
+    jd_seniority: str | None = None,
 ) -> MatchResponse:
     system = (
         "You are an expert technical Engineering Manager and Senior Recruiter evaluating a candidate's CV against a Job Description. "
@@ -188,36 +190,37 @@ async def match_skills_strict(
         excerpt = cv_text.strip()[:80000]
         text_block = f"\n\nFULL CV TEXT (use for evidence; excerpt may be truncated):\n{excerpt}\n"
 
-    user = f"""You must accurately match jd_skills to the candidate's CV for ANY industry (Tech, Finance, Healthcare, etc.).
+    user = f"""You must accurately match jd_skills to the candidate's CV.
+Candidate's auto-extracted Experience Summary: {experience_summary or 'Unknown'}
+Job Seniority Level: {jd_seniority or 'Unknown'}
 
-CORE PRINCIPLE: INTELLIGENT INFERENCE & DEDUCTION
-DO NOT just do dumb keyword matching. You must read the CV holistically to understand the candidate's actual daily work and experience.
+CORE PRINCIPLE: INTELLIGENT INFERENCE & DOMAIN MAPPING
+DO NOT just do dumb keyword matching. You must map the REAL WORK they do to the JD skills at depth.
 
-1. INFERRED FOUNDATIONAL SKILLS (Crucial):
-If a candidate has years of experience in a specialized role, you MUST infer the foundational competencies required to do that job.
-- E.g. (Tech) If they build "automation frameworks" for "NVMe SSDs" using "Pytest", they ABSOLUTELY know "automated testing", "troubleshooting", and "storage validation".
-- E.g. (Finance) If they are an "Auditor" who handles "SEC filings", they ABSOLUTELY have "financial reporting", "compliance", and "analytical skills".
-- E.g. (Marketing) If they run "Google Ads CPA campaigns", they ABSOLUTELY know "digital marketing" and "data analysis".
-You MUST mark these implicit foundational skills as strengths when analyzing their profile!
+1. DOMAIN-LEVEL EQUIVALENCY (Crucial):
+If they do deep system validation (e.g., NVMe, Pytest, regression, debugging logs), they ALREADY KNOW "Integration Testing", "Test Scenarios", "Reliability", and "System Integration". Do NOT ask them for definitions. Map their practical domain expertise to the high-level JD requirements.
 
-2. CAPABILITIES, SENIORITY & SOFT SKILLS MAPPING:
-A senior candidate's resume proves competencies even if buzzwords are missed:
-- "Staff Engineer" or 9+ years of experience implies they possess "Mentoring", "Leadership", "test approach", and "feature design" skills. Mark them as strengths!
-- If a CV mentions "debugging", "performance reproduction", or "analyzing regressions", this EXACTLY matches JD items like "failure analysis", "root cause analysis", or "defect filing". Map these semantic synonyms to Strengths! Do NOT say they are missing.
+2. INFERRED FOUNDATIONAL SKILLS:
+If a candidate has years of experience in a specialized role, infer the foundational competencies.
+- E.g. (Tech) Automation frameworks using Pytest implies "automated testing".
+- E.g. (Data) Doing ETL pipelines implies "data validation".
+Mark these as Strengths.
 
-3. ROLE HIERARCHY & DOMAIN MATCHING:
-If the JD asks for general domains like "systems products" or "distributed systems" or "QA methodologies", look at what the candidate actually does (e.g. SSDs, NVMe, CXL, Jenkins, Regression flows). These prove the domain. Mark it as a match.
+3. SENIORITY MAPPING:
+A senior candidate's resume proves competencies:
+- "Staff Engineer" or 9+ years implies "Mentoring", "Architecture", and "Test Strategy".
+- Debugging/Performance reproduction EXACTLY matches "failure analysis" or "root cause analysis".
 
-4. STRICTNESS ON EXACT TECHNOLOGIES (Hard Negatives):
-- You CANNOT infer purely distinct programming languages (e.g., Python does not mean they know Go). If JD asks for Go, and CV only has Python, mark Go as missing.
-- You CANNOT infer specific vendor products like 'ESXi', 'Hyper-V', or 'KVM' unless virtualization at that exact layer is implied/mentioned. Mark them as missing if there are no virtualization signals.
+4. STRICTNESS ON TRUE GAPS (Hard Negatives):
+- IF they are missing an entirely different paradigm (e.g. they only know Hardware/Storage, but JD needs Cloud/AWS/Customer Workload Simulation), mark the Cloud/AWS skills as MISSING.
+- Do NOT falsely attribute languages (Python != Go).
 
-4. EXHAUSTIVE OUTPUT:
-- EVERY single JD skill MUST be categorized as either a strength OR a missing_skill. Do not drop any.
+EXHAUSTIVE OUTPUT:
+- Categorize every JD skill as strength OR missing_skill.
 
 Return JSON:
 {{
-  "evaluation_reasoning": "Step-by-step thinking: explicitly mention which skills are found literally, and which skills are being semantically inferred (via seniority, synonyms, or role mapping) BEFORE deciding.",
+  "evaluation_reasoning": "Step-by-step thinking: map specific real-world work to generic JD requirements BEFORE deciding. Explicitly acknowledge their seniority level.",
   "strengths": [],
   "missing_skills": []
 }}
@@ -246,23 +249,35 @@ cv_skills: {cv_json}
     )
 
 
-async def generate_syllabus(missing_skills: list[str]) -> list[SyllabusItem]:
+async def generate_syllabus(
+    missing_skills: list[str],
+    experience_summary: str | None = None,
+    jd_seniority: str | None = None,
+) -> list[SyllabusItem]:
     if not missing_skills:
         return []
     system = (
         "You create brief learning syllabi. "
         "Return ONLY valid JSON. No markdown, no explanation."
     )
-    user = f"""For each skill in this list, return BRIEF entries (3-4 subtopics, 2 practice questions each).
+    user = f"""Candidate Experience: {experience_summary or 'Unknown'}
+Target Job Seniority: {jd_seniority or 'Unknown'}
+
+For each missing skill, create a highly practical, industry-level learning module.
+CRITICAL RULES:
+1. NO BEGINNER DEFINITIONS. Do NOT output "What is X?" or "Definition of Y".
+2. Assume the candidate has the experience described above. Treat them at their actual seniority level.
+3. Map skills at a practical depth. If they are an expert in Storage/NVMe missing "Cloud", teach them AWS infrastructure validation, not "What is the cloud".
+4. Focus on distributed systems, customer-centric validation, deployment pipelines, or real-world implementation gaps.
 
 Return JSON:
 {{
   "items": [
     {{
       "topic": "skill name",
-      "subtopics": ["...", "..."],
-      "difficulty": "Beginner|Intermediate|Advanced",
-      "practice_questions": ["...", "..."]
+      "subtopics": ["Advanced concept 1", "Real-world application 2"],
+      "difficulty": "Advanced",
+      "practice_questions": ["How do you validate X at scale?", "Debug a failure in Y paradigm"]
     }}
   ]
 }}
@@ -289,13 +304,21 @@ Skills: {json.dumps(missing_skills)}
 
 
 async def generate_interview_questions(
-    job_description: str, missing_skills: list[str]
+    job_description: str,
+    missing_skills: list[str],
+    experience_summary: str | None = None,
 ) -> list[str]:
     system = (
         "You write concise interview questions. "
         "Return ONLY valid JSON. No markdown, no explanation."
     )
-    user = f"""Return exactly 5 concise interview questions tailored to the job and the candidate weak areas.
+    user = f"""Candidate Experience: {experience_summary or 'Unknown'}
+
+Return exactly 5 concise interview questions tailored to the job and the candidate's weak areas.
+CRITICAL RULES:
+1. Questions MUST BE at the candidate's seniority level.
+2. NO basic definitions (e.g. never ask "What is integration testing?").
+3. Ask deep, situational questions (e.g. "How would you validate query correctness in a distributed database?", "How do you simulate customer workloads?").
 
 Return JSON:
 {{
