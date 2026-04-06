@@ -1,10 +1,16 @@
 import streamlit as st
 import requests
 import time
+import os
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="AI Job Preparation Assistant", page_icon="🎯", layout="wide", initial_sidebar_state="expanded")
-BASE_URL = "http://localhost:8000"
+
+# Load Backend URL correctly whether local or deployed
+if "BACKEND_URL" in st.secrets:
+    BASE_URL = st.secrets["BACKEND_URL"]
+else:
+    BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:8000")
 
 st.markdown("""
     <style>
