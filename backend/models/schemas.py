@@ -29,6 +29,8 @@ class MatchRequest(BaseModel):
         default=None,
         description="Optional full CV/resume text for evidence-based matching.",
     )
+    experience_summary: str | None = None
+    jd_seniority: str | None = None
 
 
 class MatchResponse(BaseModel):
@@ -39,6 +41,8 @@ class MatchResponse(BaseModel):
 
 class SyllabusRequest(BaseModel):
     missing_skills: list[str] = Field(default_factory=list)
+    experience_summary: str | None = None
+    jd_seniority: str | None = None
 
 
 class SyllabusItem(BaseModel):
@@ -51,6 +55,8 @@ class SyllabusItem(BaseModel):
 class InterviewRequest(BaseModel):
     job_description: str = ""
     missing_skills: list[str] = Field(default_factory=list)
+    experience_summary: str | None = None
+    jd_seniority: str | None = None
 
 
 class InterviewResponse(BaseModel):
