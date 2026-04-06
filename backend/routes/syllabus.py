@@ -16,7 +16,11 @@ router = APIRouter(tags=["Syllabus"])
 async def syllabus(body: SyllabusRequest) -> list[SyllabusItem]:
     try:
         skills = [s.strip() for s in body.missing_skills if s and str(s).strip()]
-        return await generate_syllabus(skills)
+        return await generate_syllabus(
+            skills, 
+            experience_summary=body.experience_summary, 
+            jd_seniority=body.jd_seniority
+        )
     except Exception as e:  # noqa: BLE001
         logger.exception("syllabus failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e

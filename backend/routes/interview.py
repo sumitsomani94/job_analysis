@@ -16,7 +16,11 @@ router = APIRouter(tags=["Interview"])
 async def interview(body: InterviewRequest) -> InterviewResponse:
     try:
         missing = [s.strip() for s in body.missing_skills if s and str(s).strip()]
-        qs = await generate_interview_questions(body.job_description or "", missing)
+        qs = await generate_interview_questions(
+            body.job_description or "", 
+            missing, 
+            experience_summary=body.experience_summary
+        )
         return InterviewResponse(questions=qs)
     except Exception as e:  # noqa: BLE001
         logger.exception("interview failed: %s", e)
