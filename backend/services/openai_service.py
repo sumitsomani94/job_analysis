@@ -19,7 +19,7 @@ from utils.match_evidence import augment_strengths_from_cv
 logger = logging.getLogger(__name__)
 
 MODEL = "gpt-4o-mini"
-TEMPERATURE = 0.3
+TEMPERATURE = 0.0
 MAX_TOKENS = 4096
 
 _client: AsyncOpenAI | None = None
@@ -217,6 +217,7 @@ If the JD asks for general domains like "systems products" or "distributed syste
 
 Return JSON:
 {{
+  "evaluation_reasoning": "Step-by-step thinking: explicitly mention which skills are found literally, and which skills are being semantically inferred (via seniority, synonyms, or role mapping) BEFORE deciding.",
   "strengths": [],
   "missing_skills": []
 }}
