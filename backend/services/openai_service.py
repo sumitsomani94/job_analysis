@@ -18,7 +18,7 @@ from utils.match_evidence import augment_strengths_from_cv
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-5.4-pro"
 TEMPERATURE = 0.3
 MAX_TOKENS = 4096
 
