@@ -12,7 +12,7 @@ from models.schemas import (
     InterviewResponse,
     MatchResponse,
 )
-from services.openai_service import (
+from services.ai_service import (
     analyze_cv_text,
     analyze_job_description,
     generate_interview_questions,

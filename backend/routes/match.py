@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import MatchRequest, MatchResponse
-from services.openai_service import match_skills_strict
+from services.ai_service import match_skills_strict
 
 logger = logging.getLogger(__name__)
 

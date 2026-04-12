@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from models.schemas import AnalyzeCVResponse
-from services.openai_service import analyze_cv_text
+from services.ai_service import analyze_cv_text
 from services.pdf_service import extract_pdf_text_from_bytes, validate_pdf_upload
 
 logger = logging.getLogger(__name__)

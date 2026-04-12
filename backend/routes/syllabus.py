@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import SyllabusItem, SyllabusRequest
-from services.openai_service import generate_syllabus
+from services.ai_service import generate_syllabus
 
 logger = logging.getLogger(__name__)
 
