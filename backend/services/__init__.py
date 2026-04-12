@@ -1,6 +1,6 @@
 """Application services."""
 
-from .openai_service import (
+from .ai_service import (
     analyze_job_description,
     analyze_cv_text,
     match_skills_strict,
