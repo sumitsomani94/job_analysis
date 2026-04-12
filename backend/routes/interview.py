@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import InterviewRequest, InterviewResponse
-from services.openai_service import generate_interview_questions
+from services.ai_service import generate_interview_questions
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import AnalyzeJDRequest, AnalyzeJDResponse
-from services.openai_service import analyze_job_description
+from services.ai_service import analyze_job_description
 
 logger = logging.getLogger(__name__)
 
