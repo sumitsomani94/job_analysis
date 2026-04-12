@@ -19,8 +19,8 @@ from utils.match_evidence import augment_strengths_from_cv
 
 logger = logging.getLogger(__name__)
 
-# Using Gemini 1.5 Pro which offers deep reasoning and massive context window
-MODEL_NAME = "gemini-1.5-pro"
+# Using Gemini 2.5 Pro which offers deep reasoning and massive context window
+MODEL_NAME = "gemini-2.5-pro"
 TEMPERATURE = 0.0
 
 _client_configured = False
