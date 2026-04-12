@@ -29,8 +29,14 @@ BASE_DIR = Path(__file__).resolve().parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if not os.environ.get("OPENAI_API_KEY"):
-        raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file.")
+    provider = os.getenv("LLM_PROVIDER", "").lower().strip()
+    if not provider:
+        provider = "gemini" if os.getenv("GEMINI_API_KEY") else "openai"
+        
+    if provider == "openai" and not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY is not set. Add it to your environment variables.")
+    elif provider == "gemini" and not os.getenv("GEMINI_API_KEY"):
+        raise RuntimeError("GEMINI_API_KEY is not set. Add it to your environment variables.")
     yield
 
 
